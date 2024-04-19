@@ -1,8 +1,8 @@
 from django.urls import path, include
 from .views import (
-    TodoListApiView,
+    DepressionDetectionApiView,
 )
 
 urlpatterns = [
-    path('detect', TodoListApiView.as_view()),
+    path('detect-depression', DepressionDetectionApiView.as_view()),
 ]

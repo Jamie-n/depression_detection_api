@@ -21,5 +21,5 @@ from django.urls import path, include
 from depression_detection_api import urls as api_urls
 
 urlpatterns = [
-    path('depression_detection/', include(api_urls)),
+    path('api/', include(api_urls)),
 ]

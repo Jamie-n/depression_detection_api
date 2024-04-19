@@ -4,10 +4,16 @@ from rest_framework import status
 from depression_detection_api.processing import DataPreprocessor, Predict
 
 
-class TodoListApiView(APIView):
+class DepressionDetectionApiView(APIView):
+
+    def get(self, *args, **kwargs):
+        return Response("Depression detection API", status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
-        message = request.data.get('body')
+        message = request.data.get('message')
+
+        if not message:
+            return Response("No Message Provided", status=status.HTTP_400_BAD_REQUEST)
 
         preprocessor = DataPreprocessor()
 
@@ -16,4 +22,11 @@ class TodoListApiView(APIView):
         predictor = Predict(message_with_sentiment)
         prediction = predictor.make_prediction()
 
-        return Response(prediction, status=status.HTTP_200_OK)
+        message_with_sentiment = message_with_sentiment.drop('Message Size', axis=1)
+
+        response = {
+            "is_depressed": prediction,
+            "sentiment": message_with_sentiment
+        }
+
+        return Response(response, status=status.HTTP_200_OK)
