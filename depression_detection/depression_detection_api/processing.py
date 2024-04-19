@@ -139,10 +139,10 @@ class Predict:
 
     def initialise_model(self):
         embe_nn = self.embedding()
-        textual_model = load_model(r'C:\Users\jneig\PycharmProjects\depression_detection_api\models\textual_model_0.9734146595001221.keras')
+        textual_model = load_model(r'depression_detection_api/models/textual_model_0.9734146595001221.keras')
         embedded_model = Model(embe_nn.input, textual_model(embe_nn.output))
 
-        attribute_model = load_model(r'C:\Users\jneig\PycharmProjects\depression_detection_api\models\attribute_model_0.9734146595001221.keras')
+        attribute_model = load_model(r'depression_detection_api/models/attribute_model_0.9734146595001221.keras')
 
         output = Concatenate()([embedded_model.output, attribute_model.input])
 
