@@ -15,9 +15,9 @@ class DepressionDetectionApiView(APIView):
         if not message:
             return Response("No Message Provided", status=status.HTTP_400_BAD_REQUEST)
 
-        preprocessor = DataPreprocessor()
+        preprocessor = DataPreprocessor(message)
 
-        message_with_sentiment = preprocessor.get_sentiment(message)
+        message_with_sentiment = preprocessor.get_sentiment()
 
         predictor = Predict(message_with_sentiment)
         prediction = predictor.make_prediction()

@@ -15,11 +15,15 @@ import numpy as np
 class DataPreprocessor:
     stop = ''
 
-    def __init__(self):
+    message = ''
+
+    def __init__(self, message):
         nltk.download('stopwords')
         self.stop = stopwords.words('english')
 
-    def remove_emoji(self, s):
+        self.message = message
+
+    def remove_emoji(self):
         emoji_pattern = re.compile("["
                                    u"\U0001F600-\U0001F64F"
                                    u"\U0001F300-\U0001F5FF"
@@ -40,54 +44,60 @@ class DataPreprocessor:
                                    u"\ufe0f"
                                    u"\u3030"
                                    "]+", flags=re.UNICODE)
-        return emoji_pattern.sub(r'', s)
+        self.message = emoji_pattern.sub(r'', self.message)
 
-    def remove_non_ascii(self, s):
-        return re.sub(r'[^\x00-\x7F]', '', s)
+    def remove_non_ascii(self):
+        self.message = re.sub(r'[^\x00-\x7F]', '', self.message)
 
-    def remove_handles(self, s):
-        return re.sub('@[^\s]+', '', s)
+    def remove_handles(self):
+        self.message = re.sub('@[^\s]+', '', self.message)
 
-    def remove_hashtags(self, s):
-        return re.sub('#[^\s]+', '', s)
+    def remove_hashtags(self):
+        self.message = re.sub('#[^\s]+', '', self.message)
 
-    def remove_stopwords(self, s):
-        return ' '.join([word for word in s.split() if word not in self.stop])
+    def remove_stopwords(self):
+        self.message = ' '.join([word for word in self.message.split() if word not in self.stop])
 
-    def remove_punctuation(self, s):
-        return s.translate(str.maketrans('', '', string.punctuation))
+    def remove_punctuation(self):
+        self.message = self.message.translate(str.maketrans('', '', string.punctuation))
 
-    def remove_url(self, s):
-        return re.sub(
+    def remove_url(self):
+        self.message = re.sub(
             r'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?«»“”‘’]))',
-            '', s)
+            '', self.message)
 
-    def remove_amp(self, s):
-        return re.sub('amp', '', s)
+    def remove_amp(self):
+        self.message = re.sub('amp', '', self.message)
 
-    def remove_words_depression(self, s):
+    def remove_banned_words(self):
         banned = ['I', 'Emoji']
-        return ' '.join(w for w in s.split() if not w in banned)
+        self.message = ' '.join(w for w in self.message.split() if not w in banned)
 
-    def clean_data(self, string):
-        string = self.remove_url(string)
-        string = self.remove_emoji(string)
-        string = self.remove_non_ascii(string)
-        string = self.remove_handles(string)
-        string = self.remove_hashtags(string)
-        string = self.remove_stopwords(string)
-        string = self.remove_punctuation(string)
-        string = self.remove_amp(string)
-        string = self.remove_words_depression(string)
+    def clean_data(self):
+        self.remove_url()
+        self.remove_emoji()
+        self.remove_non_ascii()
+        self.remove_handles()
+        self.remove_hashtags()
+        self.remove_stopwords()
+        self.remove_punctuation()
+        self.remove_amp()
+        self.remove_banned_words()
 
-        return string
+    def get_message(self):
+        return self.message
 
-    def get_sentiment(self, s):
-        df = pd.DataFrame([s], columns=['text'])
+    def get_sentiment(self):
+        df = pd.DataFrame([self.message], columns=['text'])
 
+        # Sentiment Analysis perfomed using VaderSentiment (Hutto & Gilbert, 2014)
+        # Hutto, C. J., \& Gilbert, E. E. (2014, June). VADER: A Parsimonious Rule-based Model for Sentiment Analysis of Social Media Text. Paper presented at the Eighth International Conference on Weblogs and Social Media (ICWSM-14), Ann Arbor, MI.
         analyzer = SentimentIntensityAnalyzer()
-        sentiment = analyzer.polarity_scores(str(s))
+        sentiment = analyzer.polarity_scores(str(self.message))
 
+
+        # AAdditional Emotion Scores provided by NRCLex (Bailey, n.d)
+        # Bailey, M. (n.d). NRCLex. GitHub. \\ https://github.com/metalcorebear/NRCLex
         df['fear'] = df['text'].apply(lambda x: NRCLex(str(x)).raw_emotion_scores.get('fear', 0))
         df['anger'] = df['text'].apply(lambda x: NRCLex(str(x)).raw_emotion_scores.get('anger', 0))
         df['anticipation'] = df['text'].apply(lambda x: NRCLex(str(x)).raw_emotion_scores.get('anticipation', 0))
@@ -111,21 +121,24 @@ class Predict:
     model = None
     tokenized_text = None
     attribute_data = None
+    dataframe = None
 
     def __init__(self, dataframe):
-        self.tokenized_text = self.tokenize(dataframe)
-        self.attribute_data = self.get_attr_from_dataframe(dataframe)
-        self.model = self.initialise_model()
+        self.dataframe = dataframe
 
-    def tokenize(self, dataframe):
+        self.model = self.initialise_model()
+        self.tokenized_text = self.tokenize()
+        self.attribute_data = self.get_attr_from_dataframe()
+
+    def tokenize(self):
         tokenizer = Tokenizer(num_words=80000, split=' ')
-        tokenizer.fit_on_texts(dataframe['text'].values)
-        X_text = tokenizer.texts_to_sequences(dataframe['text'].values)
+        tokenizer.fit_on_texts(self.dataframe['text'].values)
+        X_text = tokenizer.texts_to_sequences(self.dataframe['text'].values)
         X_text = pad_sequences(X_text, 300)
         return X_text
 
-    def get_attr_from_dataframe(self, dataframe):
-        X_attr = dataframe.loc[:, dataframe.columns != 'text']
+    def get_attr_from_dataframe(self):
+        X_attr = self.dataframe.loc[:, self.dataframe.columns != 'text']
         return X_attr
 
     def make_prediction(self):
